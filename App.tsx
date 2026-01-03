@@ -11,6 +11,8 @@ const IconPlus = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-
 const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const IconChevronLeft = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
 const IconSparkles = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" /></svg>;
+const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
+const IconX = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
 
 // --- Components ---
 
@@ -30,6 +32,8 @@ const LandingPage = () => (
 const Dashboard = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,10 +53,19 @@ const Dashboard = ({ user, onLogout }: { user: User; onLogout: () => void }) => 
     }
   };
 
+  const filteredEntries = entries.filter(entry => {
+    const matchesSearch = entry.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          entry.content.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesMood = selectedMood ? entry.mood === selectedMood : true;
+    return matchesSearch && matchesMood;
+  });
+
+  const moods = Array.from(new Set(entries.map(e => e.mood).filter(Boolean))) as string[];
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-10 glass px-6 py-4 flex items-center justify-between border-b border-slate-200">
-        <h1 className="text-xl font-bold text-indigo-600">ZenJournal</h1>
+        <h1 className="text-xl font-bold text-indigo-600 cursor-pointer" onClick={() => { setSearchTerm(''); setSelectedMood(null); }}>ZenJournal</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-slate-500 hidden sm:inline">Hello, {user.name}</span>
           <button onClick={onLogout} className="text-sm font-medium text-slate-600 hover:text-slate-900">Logout</button>
@@ -60,34 +73,83 @@ const Dashboard = ({ user, onLogout }: { user: User; onLogout: () => void }) => 
       </header>
 
       <main className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">My Journal</h2>
             <p className="text-slate-500">{loading ? 'Loading...' : `${entries.length} memories captured`}</p>
           </div>
           <button 
             onClick={() => navigate('/edit/new')}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 shrink-0"
           >
             <IconPlus /> New Entry
           </button>
         </div>
 
+        {!loading && entries.length > 0 && (
+          <div className="mb-8 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <IconSearch />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search your thoughts..." 
+                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                >
+                  <IconX />
+                </button>
+              )}
+            </div>
+            
+            {moods.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <button 
+                  onClick={() => setSelectedMood(null)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition whitespace-nowrap ${!selectedMood ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+                >
+                  All
+                </button>
+                {moods.map(mood => (
+                  <button 
+                    key={mood}
+                    onClick={() => setSelectedMood(mood === selectedMood ? null : mood)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition whitespace-nowrap ${mood === selectedMood ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+                  >
+                    {mood}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent"></div>
           </div>
-        ) : entries.length === 0 ? (
+        ) : filteredEntries.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <IconPlus />
+              {entries.length === 0 ? <IconPlus /> : <IconSearch />}
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">Start your journey</h3>
-            <p className="text-slate-500">Capture your first thought today.</p>
+            <h3 className="text-lg font-semibold text-slate-900 mb-1">
+              {entries.length === 0 ? "Start your journey" : "No entries found"}
+            </h3>
+            <p className="text-slate-500">
+              {entries.length === 0 ? "Capture your first thought today." : "Try adjusting your search filters."}
+            </p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {entries.map(entry => (
+            {filteredEntries.map(entry => (
               <div key={entry.id} className="group relative bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate(`/view/${entry.id}`)}>
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{entry.title}</h3>
@@ -143,7 +205,6 @@ const Editor = ({ user, entryId }: { user: User; entryId?: string }) => {
           setMood(existing.mood || "😊");
           setExistingInsights(existing.aiInsights);
         } else {
-          // Handle 404
           navigate('/dashboard');
         }
         setIsLoading(false);
@@ -160,8 +221,6 @@ const Editor = ({ user, entryId }: { user: User; entryId?: string }) => {
 
     // Only re-analyze if content is long enough
     if (content.length > 50) {
-      // Logic: we always try to get fresh insights if content is substantial.
-      // In a real app, we might check if content changed significantly.
       setIsAnalyzing(true);
       const newInsights = await analyzeEntry(content);
       if (newInsights) {
@@ -169,7 +228,6 @@ const Editor = ({ user, entryId }: { user: User; entryId?: string }) => {
       }
       setIsAnalyzing(false);
     } else {
-      // If content is very short, clear insights as they might be irrelevant
       aiInsights = null;
     }
 
@@ -321,11 +379,13 @@ const AuthForm = ({ type }: { type: 'login' | 'signup' }) => {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
     
     try {
       if (type === 'signup') {
@@ -337,7 +397,7 @@ const AuthForm = ({ type }: { type: 'login' | 'signup' }) => {
           }
         });
         if (error) throw error;
-        alert("Success! Check your email to confirm your account (or just login if email verification is disabled).");
+        alert("Success! Check your email to confirm your account.");
         navigate('/login');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -348,7 +408,7 @@ const AuthForm = ({ type }: { type: 'login' | 'signup' }) => {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      alert(error.message);
+      setErrorMsg(error.message);
     } finally {
       setLoading(false);
     }
@@ -361,6 +421,11 @@ const AuthForm = ({ type }: { type: 'login' | 'signup' }) => {
           <Link to="/" className="text-2xl font-bold text-indigo-600">ZenJournal</Link>
           <h2 className="text-2xl font-bold text-slate-900 mt-4">{type === 'login' ? 'Welcome Back' : 'Join ZenJournal'}</h2>
         </div>
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
+            {errorMsg}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           {type === 'signup' && (
             <div>
@@ -392,7 +457,6 @@ export default function App() {
   const [authState, setAuthState] = useState<AuthState>({ user: null, isAuthenticated: false, isLoading: true });
 
   useEffect(() => {
-    // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setAuthState({
@@ -405,7 +469,6 @@ export default function App() {
       }
     });
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setAuthState({
